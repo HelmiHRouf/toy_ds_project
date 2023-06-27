@@ -363,3 +363,87 @@ MODULE 9: LINEAR REGRESSION
             pull()
             
     answer2.2 <- ames_training|> ggpairs(column = 1:ncol(ames_training))   ; to make a trend comparison of each variable
+    
+MODULE 10: CLUSTERING
+    
+     filter(!is.na(ibu)) ; to filter out NAs in the dataset
+     
+     m_pairs <- pm_data |>select ("Total":"Speed")|>ggpairs() ; to perform a ggpairs comparison (it's eazier to select the column first)
+    
+     scaled_beer <- clean_beer |> 
+     mutate(across(everything(), scale))   ; simpler way to scale the dataset in clustering context
+     
+     beer_cluster_k2 <- kmeans(scaled_beer, centers = 2)  ; perform clustering with self selected n-centers
+     
+     tidy_beer_cluster_k2 <- augment(beer_cluster_k2, scaled_beer)  ; to bind the cluster column in the scaled dataset, NEW COLUMN: .cluster
+     
+     beer_cluster_k2_model_stats <- glance(beer_cluster_k2)  ; to get the model statistics of the un-tidy clustering
+     
+     STEP-BY-STEP TO PERFORM CLUSTERING OF VARIETY VALUE OF K I (remember to scale the dataset first):
+     elbow_stats <- tibble(k=seq(1,10))|>
+     rowwise() |>
+     mutate(poke_clusts = list(kmeans(scaled_km_data, nstart= 10, center=k)))|>
+     mutate(glanced = list(glance(poke_clusts)))|>
+     select(-poke_clusts)|>
+     unnest(glanced)
+     DONE HERE.
+     
+     elbow_plot <- elbow_stats |> 
+     ggplot(aes(x=k, y = tot.withinss))+         ; make a total distance comparison line graph based on k value
+     geom_line()+
+     geom_point()+
+     labs(x= "n clusters", y = "within-cluster sum of squares")
+     
+     
+     beer_model_stats |> 
+     pull(model_statistics) |>   ; pluck used to pull the list data on the table, consume n-row of observation
+     pluck(1) 
+     
+MODULE 11: INFERENCE 1
+
+     pop_parameters <- can_seniors|>
+            summarize(pop_mean = mean(age), pop_med = median(age), pop_sd = sd(age)) ; find mean, median, sd
+            
+     sample_1 <- can_seniors |> 
+     rep_sample_n(size = 40)          ; make a sample with self given size
+     
+     plot_grid(pop_dist, sample_1_dist, ncol = 2)  ; make a plotgrid (usualy for comparison between population and sample data)
+     
+     samples <- rep_sample_n(can_seniors, size = 40, reps = 1500) ; to get many sample with self given n
+
+     dim(samples)       ; to get a column x row of the table
+     
+     sampling_distribution <- sample_estimates|>
+                ggplot(aes(x=sample_mean))+
+                geom_histogram(binwidth = 1)+
+                xlab("Age (years) Average from each sample")+          ; plot-template for the point estimate distribution
+                ggtitle("Sampling Distribution of the Sample Means")
+
+     sampling_distribution_100 <- rep_sample_n(students_pop, size = 100, reps = 1500)|>
+            group_by(replicate)|>   ; direct code from make many sample to show the distribution of the point interest
+            summarise(sample_mean_100 = mean(grade))|>       
+            ggplot(aes(x = sample_mean_100))+
+            geom_histogram(binwidth = 0.5)+
+            labs(x = "mean sample", title = "100 sample mean distribution")
+            
+MODULE 12: BOOTSTRAP
+
+    
+    one_sample <- can_seniors |>     ; ungroup the sample and select it
+     rep_sample_n(40) |> 
+     ungroup() |> # ungroup the data frame 
+     select(age) # drop the replicate column 
+     
+    boot1000 <- one_sample |>
+     rep_sample_n(size = 40, replace = TRUE, reps = 1000)   ; take 1000 bootstrap from sample
+     
+    boot1000_means <- boot1000|>
+        group_by(replicate)|>       ; continue to find the point interest
+        summarize(mean = mean(age))
+        
+    boot1000_means |>  ; find the lower and upper bound for given confidence percentage (95 percent here)
+     select(mean) |> 
+     pull() |> 
+     quantile(c(0.025, 0.975))
+    
+
